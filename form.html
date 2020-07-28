@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第五週</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+        integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <style>
+        body {
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" class="container mt-3 ">
+        <loading :active.sync="isLoading"></loading>
+
+        <h1 class="text-center">房間列表</h1>
+
+        <div class="row mt-3">
+            <div class="col-12 col-lg-2">
+                <div class="card" style="width: 10rem;">
+                    <div class="card-header">房間類型</div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">家庭房</li>
+                        <li class="list-group-item">單人房</li>
+                        <li class="list-group-item">雙人房</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-12 col-lg-10 mt-3 d-flex flex-wrap ">
+                <div class="col-12 col-md-6 col-lg-4 mb-2  border border-light Regular shadow" style="width: 18rem;"
+                    v-for="(item) in products" :key="item.id">
+                    <img :src="item.imageUrl[0]" class="card-img-top img-fluid h-50" :alt="item.category">
+                    <div class="card-body ">
+                        <h5 class="card-title">{{ item.title }}<span
+                                class="badge badge-pill badge-success float-right ">{{item.category}}</span></h5>
+                        <p class="card-text">{{item.content}}</p>
+                        <p v-html="item.description"></p>
+                        <div class="h5" v-if="!item.price"> 原價： {{item.origin_price}} 元</div>
+                        <div v-else>
+                            <del>
+                                <h6>原價： {{item.origin_price}} 元</h6>
+                            </del>
+                            <div>
+                                <h5> 現在只要： {{item.price}} 元</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer d-flex justify-content-end ">
+                        <button type="button" ref="btn" @click="getProduct(item.id)"
+                            class="btn btn-secondary ">查看更多</button>
+                        <button type="button" ref="btn" class="btn btn-primary ml-auto" @click="addCart(item.id)"
+                            :disabled='status.loadingItem ===item.id'>
+                            <i v-if="status.loadingItem ===item.id" class="fas fa-spinner fa-spin"></i>
+                            預定房間</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal 更多內容 -->
+        <div id="productModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">{{tempProducts.title}}</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div>{{tempProducts.description}}</div>
+                        <select v-model="tempProducts.num" name class="form-control mt-3">
+                            <option value="0" disabled selected>
+                                請選擇房間數
+                            </option>
+                            <option v-for="num in 10" :key="num" :value="num">
+                                選擇 {{ num }}{{tempProducts.unit}}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="modal-footer">
+                        <div v-if="tempProducts.num" class="text-muted text-nowrap mr-3">
+                            小計
+                            <strong>{{ tempProducts.num * tempProducts.price }}</strong> 元
+                        </div>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">關閉</button>
+                        <button type="button" ref="btn" class="btn btn-primary"
+                            @click="addCart(tempProducts.id,tempProducts.num)">
+                            <i v-if="tempProducts.id === status.loadingItem" class="fas fa-spinner fa-spin"></i>
+                            預定房間</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="my-5 row justify-content-center">
+            <div class="col-md-6">
+                <div class="text-right mb-3">
+                    <button type="button" class="btn btn-outline-danger btn-sm" @click="removeAllCart()">
+                        <i class="far fa-trash-alt"> 刪除所有品項</i>
+                    </button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>刪除</th>
+                            <th>房間</th>
+                            <th>單價</th>
+                            <th width="150px" class="text-center">數量</th>
+                            <th>單位</th>
+                        </tr>
+                    </thead>
+                    <tbody v-if="cart.length === 0">
+                        <tr>
+                            <td colspan="5">
+                                無預定任何房間
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tbody v-else>
+                        <tr v-for="item in cart" :key="item.product.id">
+                            <td>
+                                <button type="button" class="btn btn-outline-danger btn-sm"
+                                    @click="removeCart(item.product.id)">
+                                    <i class="fas fa-trash-alt"></i>刪除
+                                </button>
+                            </td>
+                            <td> {{ item.product.title }}</td>
+                            <td> {{ item.product.price }}</td>
+                            <td>
+                                <div class="input-group">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-primary" type="button"
+                                            @click="updateQuantity(item.product.id, item.quantity - 1)"
+                                            :disabled="item.quantity === 1">
+                                            -
+                                        </button>
+                                    </div>
+                                    <input id="inlineFormInputGroupUsername" type="text"
+                                        class="form-control text-center" :value="item.quantity"
+                                        @keyup.enter="updateQuantity(item.product.id, $event.target.value)">
+                                    <div class="input-group-prepend">
+                                        <button class="btn btn-outline-primary" type="button"
+                                            @click="updateQuantity(item.product.id, item.quantity + 1)">
+                                            +
+                                        </button>
+                                    </div>
+                            </td>
+                            <td>
+                                {{ item.product.unit }}
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-right">
+                                總計
+                            </td>
+                            <td class="text-right">
+                                {{ cartTotal }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- 表單驗證 -->
+        <div class="my-5 row justify-content-center ">
+            <validation-observer v-slot="{ invalid }" class="col-md-6">
+                <form @submit.prevent="openmodel">
+                    <validation-provider rules="required" v-slot="{ errors, classes }" class="form-group mt-3"
+                        tag="div">
+                        <label for="name">收件人姓名</label>
+                        <input type="text" name="姓名" id="name" class="form-control" :class="classes" v-model="name">
+                        <span class="invalid-feedback"> {{errors[0]}} </span>
+                    </validation-provider>
+                    <validation-provider rules="required|email" v-slot="{ errors, classes }" class="form-group mt-3"
+                        tag="div">
+                        <label for="email">Email</label>
+                        <input type="email" name="信箱" id="email" class="form-control" :class="classes" v-model="email">
+                        <span class="invalid-feedback"> {{errors[0]}} </span>
+                    </validation-provider>
+                    <validation-provider rules="required|min:8" v-slot="{ errors, classes }" class="form-group mt-3"
+                        tag="div">
+                        <label for="tel">電話</label>
+                        <input type=" tel" name="電話" id="tel" class="form-control" :class="classes" v-model="tel">
+                        <span class="invalid-feedback"> {{errors[0]}} </span>
+                    </validation-provider>
+                    <validation-provider rules="required" v-slot="{ errors, classes }" class="form-group mt-3"
+                        tag="div">
+                        <label for="address">地址</label>
+                        <input type="text" name="地址" id="address" class="form-control" :class="classes"
+                            v-model="address">
+                        <span class="invalid-feedback"> {{errors[0]}} </span>
+                    </validation-provider>
+                    <validation-provider rules="required" v-slot="{ errors, classes }" class="form-group mt-3"
+                        tag="div">
+                        <label for="pay">付款方式</label>
+                        <select type="select" name="付款方式" id="pay" class="form-control" :class="classes" v-model="pay">
+                            <option value="" disabled selected>請選擇</option>
+                            <option value="webATM">Web ATM</option>
+                            <option value="aTM">ATM</option>
+                            <option value="barcode">Barcode</option>
+                            <option value="credit">Credit</option>
+                            <option value="applepay">Apple pay</option>
+                            <option value="googlePay">Google Pay</option>
+                            <option value="linepay">Line pay</option>
+                        </select>
+                        <span class="invalid-feedback"> {{errors[0]}} </span>
+                    </validation-provider>
+                    <validation-provider v-slot="{ errors, classes }" class="form-group" tag="div">
+                        <label for="feedback">留言</label>
+                        <textarea type="text" name="留言" id="feedback" class="form-control" :class="classes"
+                            v-model="feedback"></textarea>
+                        <span class="invalid-feedback"> {{errors[0]}} </span>
+                    </validation-provider>
+                    <div class="text-right">
+                        <button type="submit" class="btn btn-primary mt-3" :disabled="invalid">確認送出</button>
+                    </div>
+                </form>
+            </validation-observer>
+        </div>
+
+    </div>
+
+
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+        integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous">
+        </script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous">
+        </script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+        integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous">
+        </script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vee-validate/3.3.0/vee-validate.full.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue-loading-overlay@3"></script>
+
+    <script type="module">
+
+        console.log(VueLoading)
+        Vue.component('loading', VueLoading);//全域註冊方式
+        import zh_TW from './zh.js';
+        VeeValidate.localize('tw', zh_TW);
+        Vue.component('ValidationProvider', VeeValidate.ValidationProvider);
+        Vue.component('ValidationObserver', VeeValidate.ValidationObserver);
+        // Class 設定檔案
+        VeeValidate.configure({
+            classes: {
+                valid: 'is-valid',
+                invalid: 'is-invalid',
+            }
+        });
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    // 表單驗證
+                    name: '',
+                    email: '',
+                    tel: '',
+                    address: '',
+                    pay: '',
+                    feedback: '',
+
+                    //vue-loading
+                    isLoading: false,
+
+                    //抓取api
+                    user: {
+                        api: 'https://course-ec-api.hexschool.io/api/',
+                        uuid: '805a8755-d565-473e-90ee-9d24771ddf47',
+
+                    },
+
+                    //遠端資料
+                    products: [],
+                    tempProducts: {
+                        num: 0,
+                    },
+                    status: {
+                        loadingItem: '',
+                    },
+
+                    //購物車
+                    cart: {},
+                    cartTotal: 0,
+                    quantity: 0,
+                };
+
+            },
+            methods: {
+                openmodel() {
+                    console.log('送出表單')
+                },
+                getCart() {
+                    const url = `${this.user.api}${this.user.uuid}/ec/shopping`;
+                    axios.get(url).then(res => {
+                        console.log(res);
+                        this.cart = res.data.data;
+                        this.cartTotal = 0;
+                        this.quantity = 0;
+                        this.cart.forEach(item => {
+                            let total = item.product.price * item.product.quantity;
+                            this.cartTotal += total;
+                            this.quantity += item.quantity;
+                        })
+                    }).catch(error => {
+                        console.log(error);
+                    })
+                },
+
+                removeAllCart() {
+                    const url = `${this.user.api}${this.user.uuid}/ec/shopping/all/product`;
+
+                    axios.delete(url).then(res => {
+                        this.getCart();
+                    }).catch(error => {
+                        console.log(error);
+                    })
+                },
+
+                removeCart(id) {
+                    const url = `${this.user.api}${this.user.uuid}/ec/shopping/${id}`;
+                    axios.delete(url).then(res => {
+                        this.getCart();
+                    }).catch(error => {
+                        console.log(error);
+                    })
+                },
+
+                updateQuantity(id, num = 1) {
+                    const url = `${this.user.api}${this.user.uuid}/ec/shopping`;
+                    const updateData = {
+                        product: id,
+                        quantity: num,
+                    }
+                    axios.patch(url, updateData).then(res => {
+                        this.getCart();
+                    }).catch(error => {
+                        console.log(error);
+                    })
+                },
+
+
+                addCart(id, quantity = 1) {
+                    const url = `${this.user.api}${this.user.uuid}/ec/shopping`;
+                    const cart = {
+                        product: id,
+                        quantity,
+                    }
+                    axios.post(url, cart).then(res => {
+
+                        this.getCart();
+                        this.getQuantity();
+                        console.log(res);
+                    }).catch(error => {
+                        console.log(error);
+                    })
+                },
+                getQuantity() {
+                    const url = `${this.user.api}${this.user.uuid}/ec/shopping`;
+
+                    axios.get(url)
+                        .then(res => {
+                            this.quantity = res.data.data.length === 0 ? 0 : res.data.data.map(item => item.quantity).reduce((first, current) => first + current);
+                        })
+                        .catch(error => {
+                            console.log(error);
+                        })
+                },
+                getProducts(page = 1) { //整筆 參數預設值
+                    this.isLoading = true;
+                    const url = `${this.user.api}${this.user.uuid}/ec/products?page=${page}`;//加入page列表
+                    axios.get(url, this.products).then((res) => {
+                        this.isLoading = false;
+                        console.log(res);
+                        this.products = res.data.data;
+                        console.log(this.products);
+
+                    }).catch((error) => {
+                        this.isLoading = false;
+                        console.log(error);
+                    })
+                },
+                getProduct(id) { //單筆
+                    const url = `${this.user.api}${this.user.uuid}/ec/product/${id}`;
+                    console.log(id);
+                    axios.get(url).then(res => {
+                        console.log(res);
+                        this.tempProducts = res.data.data;
+                        this.tempProducts.num = 1;
+                        $('#productModal').modal('show');
+                    })
+                },
+            },
+            created() {
+                this.getCart();
+                this.getProducts();
+                this.getQuantity();
+            }
+
+        });
+    </script>
+</body>
+
+</html>
