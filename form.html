@@ -311,7 +311,7 @@
                         this.cartTotal = 0;
                         this.quantity = 0;
                         this.cart.forEach(item => {
-                            let total = item.product.price * item.product.quantity;
+                            let total = item.product.price * item.quantity;
                             this.cartTotal += total;
                             this.quantity += item.quantity;
                         })
