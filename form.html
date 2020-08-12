@@ -75,7 +75,7 @@
                     </div>
                     <div class="modal-body">
                         <div>{{tempProducts.description}}</div>
-                        <select v-model="tempProducts.num" name class="form-control mt-3">
+                        <select v-model="tempProducts.num"  class="form-control mt-3">
                             <option value="0" disabled selected>
                                 請選擇房間數
                             </option>
@@ -174,36 +174,36 @@
         <!-- 表單驗證 -->
         <div class="my-5 row justify-content-center ">
             <validation-observer v-slot="{ invalid }" class="col-md-6">
-                <form @submit.prevent="openmodel">
+                <form @submit.prevent="createOrder">
                     <validation-provider rules="required" v-slot="{ errors, classes }" class="form-group mt-3"
                         tag="div">
                         <label for="name">收件人姓名</label>
-                        <input type="text" name="姓名" id="name" class="form-control" :class="classes" v-model="name">
+                        <input type="text" name="姓名" id="name" class="form-control" :class="classes" v-model="form.name">
                         <span class="invalid-feedback"> {{errors[0]}} </span>
                     </validation-provider>
                     <validation-provider rules="required|email" v-slot="{ errors, classes }" class="form-group mt-3"
                         tag="div">
                         <label for="email">Email</label>
-                        <input type="email" name="信箱" id="email" class="form-control" :class="classes" v-model="email">
+                        <input type="email" name="信箱" id="email" class="form-control" :class="classes" v-model="form.email">
                         <span class="invalid-feedback"> {{errors[0]}} </span>
                     </validation-provider>
                     <validation-provider rules="required|min:8" v-slot="{ errors, classes }" class="form-group mt-3"
                         tag="div">
                         <label for="tel">電話</label>
-                        <input type=" tel" name="電話" id="tel" class="form-control" :class="classes" v-model="tel">
+                        <input type=" tel" name="電話" id="tel" class="form-control" :class="classes" v-model="form.tel">
                         <span class="invalid-feedback"> {{errors[0]}} </span>
                     </validation-provider>
                     <validation-provider rules="required" v-slot="{ errors, classes }" class="form-group mt-3"
                         tag="div">
                         <label for="address">地址</label>
                         <input type="text" name="地址" id="address" class="form-control" :class="classes"
-                            v-model="address">
+                            v-model="form.address">
                         <span class="invalid-feedback"> {{errors[0]}} </span>
                     </validation-provider>
                     <validation-provider rules="required" v-slot="{ errors, classes }" class="form-group mt-3"
                         tag="div">
-                        <label for="pay">付款方式</label>
-                        <select type="select" name="付款方式" id="pay" class="form-control" :class="classes" v-model="pay">
+                        <label for="payment">付款方式</label>
+                        <select type="select" name="付款方式" id="payment" class="form-control" :class="classes" v-model="form.payment">
                             <option value="" disabled selected>請選擇</option>
                             <option value="webATM">Web ATM</option>
                             <option value="aTM">ATM</option>
@@ -218,7 +218,7 @@
                     <validation-provider v-slot="{ errors, classes }" class="form-group" tag="div">
                         <label for="feedback">留言</label>
                         <textarea type="text" name="留言" id="feedback" class="form-control" :class="classes"
-                            v-model="feedback"></textarea>
+                            v-model="form.feedback"></textarea>
                         <span class="invalid-feedback"> {{errors[0]}} </span>
                     </validation-provider>
                     <div class="text-right">
@@ -265,13 +265,15 @@
             el: '#app',
             data() {
                 return {
+                    form: {
+                        name: '',
+                        email: '',
+                        tel: '',
+                        address: '',
+                        payment: '',
+                        feedback: '',
+                    },
                     // 表單驗證
-                    name: '',
-                    email: '',
-                    tel: '',
-                    address: '',
-                    pay: '',
-                    feedback: '',
 
                     //vue-loading
                     isLoading: false,
@@ -300,8 +302,14 @@
 
             },
             methods: {
-                openmodel() {
+                createOrder() {
                     console.log('送出表單')
+                    const vm =this;
+                    const order = vm.form;
+                    const url = `${this.user.api}${this.user.uuid}/ec/orders`;
+                    axios.post(url, order).then(res =>{
+                        vm.getCart()
+                    })
                 },
                 getCart() {
                     const url = `${this.user.api}${this.user.uuid}/ec/shopping`;
