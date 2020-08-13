@@ -17,9 +17,7 @@
 <body>
     <div id="app" class="container mt-3 ">
         <loading :active.sync="isLoading"></loading>
-
         <h1 class="text-center">房間列表</h1>
-
         <div class="row mt-3">
             <div class="col-12 col-lg-2">
                 <div class="card" style="width: 10rem;">
@@ -227,6 +225,19 @@
                 </form>
             </validation-observer>
         </div>
+        <div>
+          <button class="btn btn-outline-secondary"
+            type="button"
+            @click.prevent="addCouponCode">
+                套用優惠碼
+          </button>
+        </div>
+        <div>
+          <input type="text" v-model="coupon_code">
+        </div>
+        <div v-if="coupon.enabled">
+          {{ coupon_code }}
+        </div>
 
     </div>
 
@@ -298,6 +309,10 @@
                     cart: {},
                     cartTotal: 0,
                     quantity: 0,
+
+                    // 優惠券
+                    coupon_code: '',
+                    coupon: {},
                 };
 
             },
@@ -305,7 +320,11 @@
                 createOrder() {
                     console.log('送出表單')
                     const vm =this;
-                    const order = vm.form;
+                    const order = { ...vm.form }
+
+                    if(vm.coupon,enabled ===true){
+                      order.coupon = vm.coupon.code
+                    }
                     const url = `${this.user.api}${this.user.uuid}/ec/orders`;
                     axios.post(url, order).then(res =>{
                         vm.getCart()
@@ -411,6 +430,17 @@
                         $('#productModal').modal('show');
                     })
                 },
+                addCouponCode () {
+                  const url = `${this.user.api}${this.user.uuid}/ec/coupon/search`
+                  axios.post(url, { code: this.coupon_code }).then(res => {
+                    console.log(res)
+                    this.getCart()
+                    this.coupon = res.data.data
+                  })
+                    .catch(error => {
+                      console.log(error.response.data.errors)
+                    })
+                }
             },
             created() {
                 this.getCart();
